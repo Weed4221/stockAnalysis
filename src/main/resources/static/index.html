@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8"></meta>
+	<link rel="stylesheet" href="./css/style.css" />
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"/>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    
+    
+  </head>
+  <body>
+  	<div class="container">
+  		
+  		<div class="row ">
+	      <div class="mx-auto w-85">
+	        <div class="card mt-2 mx-auto bg-light">
+	            <div class="card-body bg-light">
+       
+            		<div class = "container">
+                        <form id="contact-form" role="form">
+
+			                <div class="row">
+			                    <div class="col-md-2">
+			                        <div class="form-group">
+			                             
+									  	<label for="stockList">Select stock</label>
+									  	
+									  	<select id="stockList" class="form-control">
+									  		<option></option>
+									  	</select>
+									 </div>
+								</div>
+								<div class="col-md-4">
+			                        <div class="form-group">
+						  				<label>Start date</label>
+						  	
+						  				<input class="form-control" type="date" id="startDate" placeholder="yyyy-mm-dd" value="2023-10-01" />
+						  			</div>
+								</div>
+								
+								<div class="col-md-4">
+			                        <div class="form-group">
+						  				<label>End date</label>
+						  	
+						  				<input class="form-control"  type="date" id="endDate"  placeholder="yyyy-mm-dd" value="2023-12-31" />
+						  			</div>
+								</div>
+								
+								<div class="col-md-2">
+							  		<input type="button" id="send" value="Send" class="btn btn-success btn-send mt-30"/>
+							  	</div>
+						  	</div>
+						  	
+						  	<div class="row">
+			                    <div class="col-md-4">
+			                    	<label>Minimum in the period: US$ <span id="minValueOfTicker"></span></label>
+			                    </div>
+			                    
+			                    <div class="col-md-4">
+			                    	<label>Maximum in the period: US$ <span id="maxValueOfTicker"></span></label>
+			                    </div>
+			                    
+			                    <div class="col-md-4">
+			                    	<label>Variation in the period: <span id="percentage"></span></label>
+			                    </div>
+			                </div>
+			                
+						</form>
+        			</div>
+        		</div>
+        	</div>
+        </div>
+	    <div id="chart_div" style="width: 100%; height: 500px;"></div>
+	 </div>
+	 </div>
+  </body>
+</html>
+
+<script type="text/javascript">
+
+	
+      $(document).ready(function() {
+    	  
+    	  $('#send').on('click', function(){
+    		  calulateVariations();
+    		  drawChart();
+    	  });
+    	  
+    	  getStockList();
+   	        
+    	  function calulateVariations(){
+    		  calculateMinValue();
+    		  calculateMaxValue();
+    		  calculatePercentageVariation();
+    	  }
+    	  
+    	  function calculateMinValue(){
+    		  $.ajax({
+    	      	url: "/api/stocks/findMinCloseByTicker/"+$('#stockList').val()+"?startDate="+$('#startDate').val()+"&endDate="+$('#endDate').val()
+	    	  		}).then(function(stock) {
+	    	  			
+	  	    	  		$('#minValueOfTicker').text(stock.close);
+    	  		});
+    	  }
+    	  
+    	  function calculateMaxValue(){
+    		  $.ajax({
+    	      	url: "/api/stocks/findMaxCloseByTicker/"+$('#stockList').val()+"?startDate="+$('#startDate').val()+"&endDate="+$('#endDate').val()
+	    	  		}).then(function(stock) {
+	    	  			
+	  	    	  		$('#maxValueOfTicker').text(stock.close);
+    	  		});
+    	  }
+    	  
+    	  function calculatePercentageVariation(){
+    		  $.ajax({
+    	      	url: "/api/stocks/percentageChange/"+$('#stockList').val()+"?startDate="+$('#startDate').val()+"&endDate="+$('#endDate').val()
+	    	  		}).then(function(percentage) {
+	    	  			
+	  	    	  		$('#percentage').text(percentage+"%");
+	  	    	  		
+	  	    	  		$('#percentage').addClass(percentage > 0 ? "variation-positive" : "variation-negative");
+    	  		});
+    	  }
+    	  
+	      function getStockList(){
+	        	$.ajax({
+   	    	      	url: "/api/stocks/findAllTickers"
+   	    	  		}).then(function(tickers) {
+   	    	  			
+	   	    	  		$.each(tickers, function(key,value) {
+	   	    	  			$('#stockList').append("<option value="+value+">"+value+"</option>");
+	   	    	  		});
+	   	    	  		
+	   	    	  	    $('#stockList').val(tickers.length > 0 ? tickers[0] : '');
+	   	    	  		calulateVariations();
+	   	    	  	    
+		   	    	  	google.charts.load('current', {'packages':['corechart']});
+		   		      	google.charts.setOnLoadCallback(drawChart);
+   	    	  		});
+	        }
+	        
+   	        function drawChart() {
+   	        	
+   	        	$.ajax({
+   	    	      	url: "/api/stocks/findByTicker/"+$('#stockList').val()+"?startDate="+$('#startDate').val()+"&endDate="+$('#endDate').val()
+   	    	  		}).then(function(stocks) {
+   	    	  			
+   	    	  		$('#idTIcker').text($('#stockList').val());
+   	    	  		
+   	   	    		var pricesList = [];
+   	   	    		
+	   	   	    	$.each(stocks, function(key,value) {
+	   	   	    		pricesList.push([value.date, value.low, value.open, value.close, value.high]);
+		   	   	    }); 
+   	   	    	
+	   	            var data = google.visualization.arrayToDataTable(pricesList, true);
+	
+	   	            var options = {
+	   	              legend:'none',
+		   	           hAxis: {
+		   	        	  title: "",
+		   	        	  textStyle: {
+		   	        	    fontSize:9
+		   	        	  }
+		   	        	},
+		   	           vAxis: {
+			   	        	  title: "",
+			   	        	  textStyle: {
+			   	        	    fontSize:10
+			   	        	  }
+			   	        	}
+	   	            };
+	
+	   	            var chart = new google.visualization.CandlestickChart(document.getElementById('chart_div'));
+	
+	   	            chart.draw(data, options);
+   	    	  	});
+   	          }   	        
+    	});
+  
+    </script>

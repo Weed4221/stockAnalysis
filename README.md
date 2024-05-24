@@ -5,4 +5,4 @@ Created using microservices in Spring Boot, MySQL database, and Google Chart.
 
 Details of configuration can be viewed on blog post
 
-https://fernandovale.com/2024/02/10/spring-boot-stock-charts-microservices/
+https://fernandovale.hashnode.dev/spring-boot-stock-charts-microservices
